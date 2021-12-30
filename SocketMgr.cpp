@@ -131,6 +131,7 @@ void SocketMgr::ManageMonitorStream()
     // Enter monitor loop.
     char * pBuffer = new char[MAX_BUFFER_SIZE];
     int size = 0;
+    int frame = 0;
     while (1)
     {
         // Get a frame from the server.

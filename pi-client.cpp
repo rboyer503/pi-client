@@ -1,5 +1,6 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include "SocketMgr.h"
 
 
@@ -9,6 +10,14 @@ using namespace cv;
 
 constexpr int c_windowWidth = 640;
 constexpr int c_windowHeight = 480;
+
+
+struct Statistics
+{
+    int numFrames;
+    int currUs;
+    int maxUs;
+};
 
 
 void usage()
@@ -32,10 +41,14 @@ int main(int argc, char * argv[])
     namedWindow(windowName, WINDOW_NORMAL);
     resizeWindow(windowName, c_windowWidth, c_windowHeight);
 
+    Statistics stats = {};
+    boost::posix_time::ptime startTime = boost::posix_time::microsec_clock::local_time();
+    boost::posix_time::ptime lastTime = boost::posix_time::microsec_clock::local_time();
     bool debugMode = false;
+
     while (!socketMgr.HasExited())
     {
-        char c = waitKey(50);
+        char c = waitKey(5);
         if (c == 'q')
             break;
         else if (c == '*')
@@ -66,6 +79,22 @@ int main(int argc, char * argv[])
                 else if (c == '}')
                     socketMgr.SendCommand("param2 up");
             }
+            else
+            {
+                if (c == 's')
+                {
+                    cout << endl << "Statistics" << endl;
+                    cout << "\tTotal frames:\t" << stats.numFrames << endl;
+
+                    if (stats.numFrames)
+                    {
+                        auto diffTime = boost::posix_time::microsec_clock::local_time() - startTime;
+                        cout << "\tAverage FPS:\t" << (stats.numFrames / diffTime.total_seconds()) << endl;
+                        cout << "\tCurrent us:\t" << stats.currUs << endl;
+                        cout << "\tMax us:\t" << stats.maxUs << endl;
+                    }
+                }
+            }
         }
 
         auto currFrame = socketMgr.GetCurrentFrame();
@@ -74,6 +103,13 @@ int main(int argc, char * argv[])
             if ( (currFrame->size().width > 0) && (currFrame->size().height > 0) )
             {
                 imshow(windowName, *currFrame);
+
+                auto currTime = boost::posix_time::microsec_clock::local_time();
+                ++stats.numFrames;
+                stats.currUs = (currTime - lastTime).total_microseconds();
+                lastTime = currTime;
+                if (stats.maxUs < stats.currUs)
+                    stats.maxUs = stats.currUs;
             }
             else
                 cerr << "DEBUG: Missed frame" << endl;
