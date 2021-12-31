@@ -7,24 +7,26 @@
 #include <boost/thread/mutex.hpp>
 #include <opencv2/opencv.hpp>
 
-#define SM_MONITOR_PORT 5000
-#define SM_COMMAND_PORT 5001
-
 
 class SocketMgr
 {
+    static constexpr int c_monitorPort = 5000;
+    static constexpr int c_commandPort = 5001;
+    static constexpr int c_numRxSegments = 4;
+    static constexpr int c_maxBufferSize = 1048576; // Enough room for worst-case compression of 640x480x3 images.
+
     char m_serverIP[INET6_ADDRSTRLEN] = {};
-    int m_monfd;
-    int m_cmdfd;
-    bool m_connected;
+    int m_monfd = -1;
+    int m_cmdfd = -1;
+    bool m_connected = false;
     boost::thread m_threadMon;
-    volatile bool m_exited;
+    volatile bool m_exited = false;
     std::unique_ptr<cv::Mat> m_currFrame;
     boost::mutex m_frameMutex;
     boost::mutex m_sendMutex;
 
 public:
-    SocketMgr();
+    SocketMgr() = default;
     ~SocketMgr();
 
     bool IsConnected() const { return m_connected; }

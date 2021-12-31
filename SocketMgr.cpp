@@ -7,16 +7,10 @@
 #include <unistd.h>
 #include <errno.h>
 
-#define MAX_BUFFER_SIZE 230454  // Large enough for .bmp formatted 320x240x3 image.
 
 using namespace std;
 using namespace cv;
 
-
-SocketMgr::SocketMgr() :
-    m_monfd(-1), m_cmdfd(-1), m_connected(false), m_exited(false)
-{
-}
 
 SocketMgr::~SocketMgr()
 {
@@ -47,7 +41,7 @@ bool SocketMgr::Connect(const char * hostname)
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = inet_addr(m_serverIP);
-    serverAddr.sin_port = htons(SM_MONITOR_PORT);
+    serverAddr.sin_port = htons(c_monitorPort);
 
     if ( connect(m_monfd, (const sockaddr *)&serverAddr, sizeof(serverAddr)) < 0 )
     {
@@ -57,7 +51,7 @@ bool SocketMgr::Connect(const char * hostname)
         return false;
     }
 
-    serverAddr.sin_port = htons(SM_COMMAND_PORT);
+    serverAddr.sin_port = htons(c_commandPort);
     if ( connect(m_cmdfd, (const sockaddr *)&serverAddr, sizeof(serverAddr)) < 0 )
     {
         cerr << "Error: Could not connect to command port." << endl;
@@ -129,7 +123,7 @@ bool SocketMgr::HostnameToIP(const char * hostname)
 void SocketMgr::ManageMonitorStream()
 {
     // Enter monitor loop.
-    char * pBuffer = new char[MAX_BUFFER_SIZE];
+    char * pBuffer = new char[c_maxBufferSize];
     int size = 0;
     int frame = 0;
     while (1)
@@ -138,11 +132,31 @@ void SocketMgr::ManageMonitorStream()
         if (!RecvFrame(pBuffer, size))
             break;
 
-        // Decode into cv:Mat.
-        vector<char> buf(pBuffer, pBuffer + size);
+        // Extract the buffer segments.
+        vector<char> buffers[c_numRxSegments];
+        char * offset = pBuffer;
+        for (int i = 0; i < c_numRxSegments; ++i)
+        {
+            int32_t segmentSize = *reinterpret_cast<int32_t *>(offset);
+            offset += sizeof(int32_t);
+            buffers[i].insert(buffers[i].end(), offset, offset + segmentSize);
+            offset += segmentSize;
+        }
+
+        // Decode into Mat.
         {
             boost::mutex::scoped_lock lock(m_frameMutex);
-            m_currFrame = make_unique<Mat>(imdecode(buf, 1));
+            m_currFrame = make_unique<Mat>(Size(640, 480), CV_8UC3);
+
+            int segmentHeight = m_currFrame->rows / c_numRxSegments;
+            Mat matSegments[c_numRxSegments];
+
+            #pragma omp parallel for
+            for (int i = 0; i < c_numRxSegments; ++i)
+            {
+                matSegments[i] = (*m_currFrame)(Rect(0, segmentHeight * i, m_currFrame->cols, segmentHeight));
+                imdecode(buffers[i], 1, &matSegments[i]);
+            }
         }
 
         // Give main thread an opportunity to shut this thread down.
@@ -169,7 +183,7 @@ bool SocketMgr::RecvFrame(char * pRawData, int & size)
         return false;
     }
 
-    if ( (size > MAX_BUFFER_SIZE) || (size <= 0) )
+    if ( (size > c_maxBufferSize) || (size <= 0) )
     {
         cerr << "Error: Invalid frame size " << size << "." << endl;
         return false;

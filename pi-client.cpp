@@ -37,7 +37,7 @@ int main(int argc, char * argv[])
     if (!socketMgr.Connect(argv[1]))
         return 1;
 
-    const std::string windowName = "Pi Client - "s + argv[1];
+    const string windowName = "Pi Client - "s + argv[1];
     namedWindow(windowName, WINDOW_NORMAL);
     resizeWindow(windowName, c_windowWidth, c_windowHeight);
 
