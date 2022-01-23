@@ -10,8 +10,8 @@
 
 class SocketMgr
 {
-    static constexpr int c_monitorPort = 5000;
-    static constexpr int c_commandPort = 5001;
+    static constexpr int c_monitorPort = 34601;
+    static constexpr int c_commandPort = 34602;
     static constexpr int c_numRxSegments = 4;
     static constexpr int c_maxBufferSize = 1048576; // Enough room for worst-case compression of 640x480x3 images.
 
@@ -32,7 +32,7 @@ public:
     bool IsConnected() const { return m_connected; }
     bool HasExited() const { return m_exited; }
 
-    bool Connect(const char * hostname);
+    bool Connect(const char * hostname, const char * token);
     void Disconnect();
 
     std::unique_ptr<cv::Mat> GetCurrentFrame();

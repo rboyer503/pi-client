@@ -22,19 +22,19 @@ struct Statistics
 
 void usage()
 {
-    cout << "Usage: ./pi-client <server hostname>" << endl;
+    cout << "Usage: ./pi-client <server hostname> <token>" << endl;
 }
 
 int main(int argc, char * argv[])
 {
-    if (argc != 2)
+    if (argc != 3)
     {
         usage();
         return 1;
     }
 
     SocketMgr socketMgr;
-    if (!socketMgr.Connect(argv[1]))
+    if (!socketMgr.Connect(argv[1], argv[2]))
         return 1;
 
     const string windowName = "Pi Client - "s + argv[1];

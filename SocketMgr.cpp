@@ -17,7 +17,7 @@ SocketMgr::~SocketMgr()
     Disconnect();
 }
 
-bool SocketMgr::Connect(const char * hostname)
+bool SocketMgr::Connect(const char * hostname, const char * token)
 {
     if (!HostnameToIP(hostname))
     {
@@ -59,6 +59,8 @@ bool SocketMgr::Connect(const char * hostname)
         close(m_cmdfd);
         return false;
     }
+
+    SendCommand(token);
 
     m_threadMon = boost::thread(&SocketMgr::ManageMonitorStream, this);
 
