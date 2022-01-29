@@ -1,7 +1,9 @@
+#include "SocketMgr.h"
+#include "Profiling.h"
+
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include "SocketMgr.h"
 
 
 using namespace std;
@@ -101,7 +103,9 @@ int main(int argc, char * argv[])
         {
             if ( (currFrame->size().width > 0) && (currFrame->size().height > 0) )
             {
+                PROFILE_START;
                 imshow(windowName, *currFrame);
+                PROFILE_LOG(SHOW);
 
                 auto currTime = boost::posix_time::microsec_clock::local_time();
                 ++stats.numFrames;

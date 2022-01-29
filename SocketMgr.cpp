@@ -1,4 +1,5 @@
 #include "SocketMgr.h"
+#include "Profiling.h"
 
 #include <iostream>
 #include <sys/socket.h>
@@ -130,9 +131,14 @@ void SocketMgr::ManageMonitorStream()
     int frame = 0;
     while (1)
     {
+        PROFILE_START;
+
         // Get a frame from the server.
         if (!RecvFrame(pBuffer, size))
             break;
+
+        PROFILE_LOG(RECVFRAME);
+        PROFILE_START;
 
         // Extract the buffer segments.
         vector<char> buffers[c_numRxSegments];
@@ -154,12 +160,18 @@ void SocketMgr::ManageMonitorStream()
             Mat matSegments[c_numRxSegments];
 
             #pragma omp parallel for
-            for (int i = 0; i < c_numRxSegments; ++i)
+            for (int i = 0; i < (c_numRxSegments / 2); ++i)
             {
-                matSegments[i] = (*m_currFrame)(Rect(0, segmentHeight * i, m_currFrame->cols, segmentHeight));
-                imdecode(buffers[i], 1, &matSegments[i]);
+                int index = i * 2;
+                matSegments[index] = (*m_currFrame)(Rect(0, segmentHeight * index, m_currFrame->cols, segmentHeight));
+                imdecode(buffers[index], 1, &matSegments[index]);
+                ++index;
+                matSegments[index] = (*m_currFrame)(Rect(0, segmentHeight * index, m_currFrame->cols, segmentHeight));
+                imdecode(buffers[index], 1, &matSegments[index]);
             }
         }
+
+        PROFILE_LOG(DECODED);
 
         // Give main thread an opportunity to shut this thread down.
         try
