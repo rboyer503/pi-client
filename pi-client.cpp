@@ -44,21 +44,20 @@ int main(int argc, char * argv[])
     Statistics stats = {};
     boost::posix_time::ptime startTime = boost::posix_time::microsec_clock::local_time();
     boost::posix_time::ptime lastTime = boost::posix_time::microsec_clock::local_time();
-    bool debugMode = false;
+    bool clientDebugMode = false;
 
     while (!socketMgr.HasExited())
     {
         char c = waitKey(5);
         if (c == 'q')
             break;
-        else if (c == '*')
+        else if (c == ' ')
         {
-            socketMgr.SendCommand("debugmode");
-            debugMode = !debugMode;
+            clientDebugMode = !clientDebugMode;
         }
         else
         {
-            if (debugMode)
+            if (!clientDebugMode)
             {
                 if (c == 's')
                     socketMgr.SendCommand("status");
@@ -68,8 +67,6 @@ int main(int argc, char * argv[])
                     socketMgr.SendCommand("mode");
                 else if (c == 'p')
                     socketMgr.SendCommand("page");
-                else if (c == 'd')
-                    socketMgr.SendCommand("debug");
                 else if (c == '[')
                     socketMgr.SendCommand("param1 down");
                 else if (c == ']')
@@ -78,6 +75,8 @@ int main(int argc, char * argv[])
                     socketMgr.SendCommand("param2 down");
                 else if (c == '}')
                     socketMgr.SendCommand("param2 up");
+                else if (c == '*')
+                    socketMgr.SendCommand("debugmode");
             }
             else
             {
